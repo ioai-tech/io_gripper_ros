@@ -138,16 +138,15 @@ COPY src/ /ros2_ws/src/
 # Build ROS2 packages
 SHELL ["/bin/bash", "-c"]
 RUN source /opt/ros/humble/setup.bash && \
-    colcon build \
+    colcon --log-base log_x64 build \
       --merge-install \
       --install-base install_x64 \
       --build-base build_x64 \
-      --log-base log_x64 \
       --packages-select io_gripper_interfaces io_gripper_ros
 
 # Add ROS2 workspace to bashrc
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
+    echo "source /ros2_ws/install_x64/setup.bash" >> /root/.bashrc
 
 WORKDIR /root/workspace
 
