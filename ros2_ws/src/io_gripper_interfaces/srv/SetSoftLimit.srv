@@ -1,0 +1,7 @@
+uint8 servo_id
+
+float32 min_width_mm
+float32 max_width_mm
+---
+bool success
+string message

@@ -1,0 +1,6 @@
+uint8 start_id
+uint8 end_id
+---
+bool success
+string message
+uint8[] ids

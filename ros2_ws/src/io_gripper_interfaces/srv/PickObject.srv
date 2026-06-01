@@ -1,0 +1,7 @@
+float32 width_mm
+float32 speed
+float32 effort
+int32 timeout_ms
+---
+bool success
+string message

@@ -1,0 +1,11 @@
+uint8 MODE_CURRENT_MA=0
+uint8 MODE_TORQUE_RAW=1
+uint8 MODE_ALLSELECT=2
+
+uint8 mode
+
+float32 current_limit_ma
+uint16 torque_limit_raw
+---
+bool success
+string message

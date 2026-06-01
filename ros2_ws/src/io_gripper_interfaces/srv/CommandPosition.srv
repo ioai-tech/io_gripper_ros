@@ -1,0 +1,10 @@
+uint8 MODE_RAW=0
+uint8 MODE_RAD=1
+
+uint8 mode
+
+uint16 position_raw
+float32 angle_rad
+---
+bool success
+string message

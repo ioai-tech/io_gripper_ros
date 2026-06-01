@@ -1,0 +1,110 @@
+/*
+ * @Author: 培岩 樊 fanpy@io-ai.tech
+ * @Date: 2026-05-25 18:00:29
+ * @LastEditors: 培岩 樊 fanpy@io-ai.tech
+ * @LastEditTime: 2026-05-29 16:53:23
+ * @FilePath: /ROS2_SDK/ros2_ws/src/io_gripper_ros/src/gripper_port_resolver.cpp
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
+ * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+#include "io_gripper_ros/gripper_port_resolver.hpp"
+
+#include <yaml-cpp/yaml.h>
+
+#include <iostream>
+#include <stdexcept>
+#include <vector>
+namespace io::gripper {
+GripperPortResolver::GripperPortResolver() {}
+GripperPortResolver::~GripperPortResolver() {}
+
+std::string GripperPortResolver::resolveByCameraSerial(
+    const std::string& camera_serial) {
+  if (camera_serial.empty()) {
+    throw std::runtime_error("camera_serial is empty");
+  }
+
+  std::string gripper_path =
+      port_finder_.resolve_gripper_by_camera_serial(camera_serial);
+
+  if (gripper_path.empty()) {
+    throw std::runtime_error(
+        "resolve_gripper_by_camera_serial returned empty path");
+  }
+
+  std::string tty_port = port_finder_.find_by_path_from_tty(gripper_path);
+
+  if (tty_port.empty()) {
+    throw std::runtime_error("find_by_path_from_tty returned empty port");
+  }
+
+  return tty_port;
+}
+
+void GripperPortResolver::printAllMappings() {
+  std::vector<CameraInfo> cameras = port_finder_.get_usb_cameras_info();
+
+  if (cameras.empty()) {
+    std::cout << "No USB camera found." << std::endl;
+    return;
+  }
+
+  for (size_t i = 0; i < cameras.size(); ++i) {
+    const auto& cam = cameras[i];
+
+    std::string gripper_path =
+        port_finder_.resolve_gripper_by_camera_serial(cam.serial);
+
+    std::string tty_port = port_finder_.find_by_path_from_tty(gripper_path);
+
+    std::cout << "[" << i << "] "
+              << "camera_serial=" << cam.serial
+              << ", gripper_path=" << gripper_path << ", tty_port=" << tty_port
+              << std::endl;
+  }
+}
+
+DeviceProfile GripperPortResolver::create_gripper_driver(
+    const std::string& config_file_path) {
+  DeviceProfile profile;
+  YAML::Node config = YAML::LoadFile(config_file_path);
+  auto DeviceProfile_Node = config["DeviceProfile"];
+  // 基础信息
+  profile.model_name =
+      DeviceProfile_Node["device_info"]["model_name"].as<std::string>();
+  profile.servo_id =
+      static_cast<int>(DeviceProfile_Node["device_info"]["servo_id"].as<int>());
+  profile.recommended_baudrate =
+      DeviceProfile_Node["device_info"]["recommended_baudrate"].as<int>();
+
+  // 安全限制
+  profile.min_voltage_V =
+      DeviceProfile_Node["safety_limits"]["min_voltage_v"].as<float>();
+  profile.max_voltage_V =
+      DeviceProfile_Node["safety_limits"]["max_voltage_v"].as<float>();
+  profile.max_temperature_C =
+      DeviceProfile_Node["safety_limits"]["max_temperature_c"].as<float>();
+  profile.start_power =
+      DeviceProfile_Node["safety_limits"]["start_power"].as<int>(8);
+  profile.release_torque_on_disconnect =
+      DeviceProfile_Node["safety_limits"]["release_torque_on_disconnect"]
+          .as<bool>(true);
+  profile.max_servo_velocity =
+      DeviceProfile_Node["safety_limits"]["max_servo_velocity"].as<int>(2000);
+
+  // 标定参数
+  profile.calib_max_position_raw =
+      DeviceProfile_Node["calibration"]["calib_max_position_raw"]
+          .as<uint16_t>();
+  profile.calib_min_position_raw =
+      DeviceProfile_Node["calibration"]["calib_min_position_raw"]
+          .as<uint16_t>();
+  profile.calib_max_width_mm =
+      DeviceProfile_Node["calibration"]["calib_max_width_mm"].as<float>();
+  profile.calib_min_width_mm =
+      DeviceProfile_Node["calibration"]["calib_min_width_mm"].as<float>();
+
+  return profile;
+}
+
+}  // namespace io::gripper
