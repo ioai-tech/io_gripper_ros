@@ -31,7 +31,7 @@ git clone --recurse-submodules <仓库地址>
 cd ROS2_SDK/ros2_ws
 ```
 
-### 2. 构建项目
+### 2. 构建项目(在ros2_ws下)
 
 ```bash
 colcon build --packages-select io_gripper_interfaces io_gripper_ros
