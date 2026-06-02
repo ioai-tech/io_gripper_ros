@@ -150,9 +150,4 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
 
 WORKDIR /root/workspace
 
-ENV LD_LIBRARY_PATH=/root/workspace/ros2_ws/src/io_gripper_sdk/lib
-
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "export LD_LIBRARY_PATH=/root/workspace/ros2_ws/src/io_gripper_sdk/lib:\$LD_LIBRARY_PATH" >> /root/.bashrc
-
 CMD ["/bin/bash"]

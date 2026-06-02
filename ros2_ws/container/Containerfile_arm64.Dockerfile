@@ -167,8 +167,5 @@ ENV https_proxy=
 ENV HTTP_PROXY=
 ENV HTTPS_PROXY=
 
-ENV LD_LIBRARY_PATH=/root/workspace/ros2_ws/src/io_gripper_sdk/lib
-
-RUN echo "export LD_LIBRARY_PATH=/root/workspace/ros2_ws/src/io_gripper_sdk/lib:\$LD_LIBRARY_PATH" >> /root/.bashrc
 
 CMD ["/bin/bash"]
