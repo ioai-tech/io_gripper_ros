@@ -247,16 +247,16 @@ sudo docker build \
 
 ## 运行节点
 ```bash
+x64：
 sudo docker run --rm -it \
  --net=host \
  --ipc=host\
   --privileged \
   -v /dev:/dev \
-  -v ~/fpy/ROS2_SDK/ros2_ws:/root/workspace/ros2_ws \
   io_gripper_ros:latest \
-  bash -c "cd /root/workspace/ros2_ws && \
+  bash -c "cd /ros2_ws && \
            source /opt/ros/humble/setup.bash && \
-           source install/setup.bash && \
+           source install_x64/setup.bash && \
            ros2 run io_gripper_ros io_gripper_node \
              --ros-args \
              -r __node:=left_gripper_node \
@@ -266,3 +266,22 @@ sudo docker run --rm -it \
              -p config_name:=new_config.yaml"
 ```
 
+``` bash
+arm64版本：
+sudo docker run --rm -it \
+ --net=host \
+ --ipc=host\
+  --privileged \
+  -v /dev:/dev \
+  io_gripper_ros:latest \
+  bash -c "cd /ros2_ws && \
+           source /opt/ros/humble/setup.bash && \
+           source install_arm64/setup.bash && \
+           ros2 run io_gripper_ros io_gripper_node \
+             --ros-args \
+             -r __node:=left_gripper_node \
+             -r __ns:=/io_left_gripper \
+             -p auto_detect_port:=true \
+             -p camera_serial:=G2026061 \
+             -p config_name:=new_config.yaml"
+```
