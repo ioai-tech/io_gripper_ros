@@ -51,6 +51,14 @@ git submodule update --init --recursive
 ```bash
 ros2 run io_gripper_ros io_gripper_node --ros-args -r __node:=left_gripper_node -r __ns:=/io_left_gripper -p auto_detect_port:=true -p camera_serial:=G2026061 -p config_name:=new_config.yaml
 ```
+### 命令说明
+  -`__node:=left_gripper_node` 节点名称 不同节点对应不同的节点名称
+  -`__ns:=/io_left_gripper` 命名空间 不同的夹爪节点必须用不同的命名空间，同时各自对应的 topic和service 也要修改
+  -`auto_detect_port:=true` 是否自动检测串口端口 默认true。 如果选择false 则需要手动指定串口设备名称和相机端口（或者使用默认值），同时不必传入`camera_serial`
+  -`port:=/dev/ttyUSB0` 串口设备名称，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/ttyUSB0’
+  -`camera_image_port:=/dev/video0` 相机端口，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/video0’
+  -`camera_serial:=""` 夹爪相机对应的序列号，如果`auto_detect_port:=true`，则必须传入该参数来控制对应的夹爪。如果`auto_detect_port:=false`，则可以不传入该参数，使用默认值。
+  -`config_name:=new_config.yaml` 配置文件名称
 
 ### 服务调用示例
 
@@ -59,9 +67,14 @@ ros2 run io_gripper_ros io_gripper_node --ros-args -r __node:=left_gripper_node 
 ros2 service call /io_left_gripper/connect std_srvs/srv/Trigger "{}"
 ```
 
-#### 初始化夹爪
+#### 初始化夹爪同时开始发布相机图像话题
 ```bash
 ros2 service call /io_left_gripper/initialize std_srvs/srv/Trigger "{}"
+```
+
+### 夹爪语义控制
+```bash
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 0, width_mm: 120, max_effort: 0.5, speed: 0.5}"
 ```
 
 #### 设置位置
@@ -116,17 +129,27 @@ ros2 service call /io_left_gripper/fix_config io_gripper_interfaces/srv/FixConfi
 
 #### 启动状态轮询
 ```bash
-ros2 service call /io_gripper/start_polling io_gripper_interfaces/srv/StartPolling "{rate_hz: 100}"
+ros2 service call /io_left_gripper/start_polling io_gripper_interfaces/srv/StartPolling "{rate_hz: 100}"
 ```
 
 ### 开启轮询后获取轮询状态 once只获取一次
 ```bash
-ros2 topic echo /io_gripper/status --once
+ros2 topic echo /io_left_gripper/status --once
+```
+
+### 获取相机图像
+```bash
+ros2 topic echo /io_left_gripper/camera_image --once
+```
+
+#### 停止发布相机图像话题
+```bash
+ros2 service call /io_left_gripper/stop_camera std_srvs/srv/Trigger "{}"
 ```
 
 ### 断开连接
 ```bash
-ros2 service call /io_gripper/disconnect std_srvs/srv/Trigger "{}"
+ros2 service call /io_left_gripper/disconnect std_srvs/srv/Trigger "{}"
 ```
 
 ## 话题发布
@@ -167,6 +190,11 @@ DeviceProfile:
     calib_min_position_raw: 2293
     calib_max_width_mm: 100.0
     calib_min_width_mm: 0.0
+  camera:
+    width: 640
+    height: 480
+    fps: 30.0
+    jpeg_quality: 80
 ```
 
 ## 状态码说明
@@ -225,7 +253,7 @@ sudo chmod 666 端口+
 
 ### Q: 配置文件修改后不生效？
 
-修改配置文件后需要重新启动节点，或者调用 `fix_config` 服务后重新连接。
+通过`fix_config`服务修改配置文件后需要重新连接。
 
 ### Q: 子模块更新后编译失败？
 
@@ -238,8 +266,8 @@ colcon build --symlink-install
 ## 使用 dockerfile 构建（x_64）
 ```bash
 sudo docker build \
-  --build-arg HTTP_PROXY=http://192.168.2.164:8082 \
-  --build-arg HTTPS_PROXY=http://192.168.2.164:8082 \
+  --build-arg HTTP_PROXY=    \
+  --build-arg HTTPS_PROXY=   \
   --build-arg NO_PROXY=localhost,127.0.0.1 \
   -f container/Containerfile_x64.Dockerfile \
   -t io_gripper_ros:latest .

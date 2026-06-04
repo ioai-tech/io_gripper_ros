@@ -41,6 +41,7 @@ std::string GripperPortResolver::resolveByCameraSerial(
   return tty_port;
 }
 
+
 void GripperPortResolver::printAllMappings() {
   std::vector<CameraInfo> cameras = port_finder_.get_usb_cameras_info();
 
@@ -62,6 +63,35 @@ void GripperPortResolver::printAllMappings() {
               << ", gripper_path=" << gripper_path << ", tty_port=" << tty_port
               << std::endl;
   }
+}
+
+
+std::string GripperPortResolver::resolveCameraImageByCameraSerial(
+    const std::string& camera_serial) {
+    if (camera_serial.empty()) {
+    throw std::runtime_error("camera_serial is empty");
+  }
+    std::string gripper_path =
+        port_finder_.find_video_by_camera_serial(camera_serial);
+
+    if (gripper_path.empty()) {
+      throw std::runtime_error(
+          "find_video_by_camera_serial returned empty path");
+    }
+
+    std::string dev_vedio_port = port_finder_.get_video_id_path(gripper_path);
+
+    if (dev_vedio_port.empty()) {
+      throw std::runtime_error("get_video_id_path returned empty port");
+    }
+
+    std::string res_camera_image_port = port_finder_.find_video_by_id_path(dev_vedio_port);
+
+    if (res_camera_image_port.empty()) {
+      throw std::runtime_error("find_video_by_id_path returned empty port");
+    }
+
+    return res_camera_image_port;
 }
 
 DeviceProfile GripperPortResolver::create_gripper_driver(
@@ -103,6 +133,16 @@ DeviceProfile GripperPortResolver::create_gripper_driver(
       DeviceProfile_Node["calibration"]["calib_max_width_mm"].as<float>();
   profile.calib_min_width_mm =
       DeviceProfile_Node["calibration"]["calib_min_width_mm"].as<float>();
+
+  // 相机参数
+  profile.width =
+      DeviceProfile_Node["camera"]["width"].as<int>();
+  profile.height =
+      DeviceProfile_Node["camera"]["height"].as<int>();
+  profile.fps =
+      DeviceProfile_Node["camera"]["fps"].as<float>();
+  profile.jpeg_quality =
+      DeviceProfile_Node["camera"]["jpeg_quality"].as<int>();
 
   return profile;
 }

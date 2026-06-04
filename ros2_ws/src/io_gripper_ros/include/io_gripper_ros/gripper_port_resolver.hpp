@@ -20,6 +20,7 @@ class GripperPortResolver {
   ~GripperPortResolver();
 
   std::string resolveByCameraSerial(const std::string& camera_serial);
+  std::string resolveCameraImageByCameraSerial(const std::string& camera_serial);
 
   void printAllMappings();
   DeviceProfile create_gripper_driver(const std::string& config_file_path);

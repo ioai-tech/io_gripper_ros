@@ -19,6 +19,11 @@ DeviceProfile:
     calib_min_position_raw: 2293
     calib_max_width_mm: 100.0
     calib_min_width_mm: 0.0
+  camera:
+    width: 640
+    height: 480
+    fps: 30.0
+    jpeg_quality: 80
 gripper:
   use_width_normalized:
     use_width_mm: true

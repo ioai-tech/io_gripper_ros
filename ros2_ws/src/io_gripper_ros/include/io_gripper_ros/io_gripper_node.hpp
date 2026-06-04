@@ -28,6 +28,7 @@
 #include "io_gripper_interfaces/srv/start_polling.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
+#include "sensor_msgs/msg/compressed_image.hpp"
 namespace io::gripper {
 // class GripperDriver;
 
@@ -43,6 +44,7 @@ class IoGripperNode : public rclcpp::Node {
   bool auto_detect_port_;
   std::string camera_serial_;
   std::string port_;
+  std::string camera_image_port_;
   std::string config_file_path_;
   std::atomic_bool calibrating_{false};
 
@@ -51,7 +53,9 @@ class IoGripperNode : public rclcpp::Node {
   bool driver_initialized_{false};
   std::string last_error_message_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::TimerBase::SharedPtr camera_timer_;
   std::unique_ptr<GripperDriver> driver_;
+  std::unique_ptr<GripperCamera> camera_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr connect_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr initialize_srv_;
   rclcpp::Service<io_gripper_interfaces::srv::StartPolling>::SharedPtr
@@ -83,12 +87,20 @@ class IoGripperNode : public rclcpp::Node {
   rclcpp::Service<io_gripper_interfaces::srv::FixConfig>::SharedPtr
       fix_config_srv_;
 
+  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr
+      camera_image_pub_;
+
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_camera_srv_;
+
+
+
  private:
   bool isDriverReady() const;
   bool createDriver();
   bool connectDriver();
   bool initializeGripper();
   std::string resolvePort();
+  std::string resolveCameraImagePort();
   void startpollingCallback(
       const std::shared_ptr<io_gripper_interfaces::srv::StartPolling::Request>
           request,
@@ -170,5 +182,10 @@ class IoGripperNode : public rclcpp::Node {
           request,
       std::shared_ptr<io_gripper_interfaces::srv::FixConfig::Response>
           response);
+
+    void publishCameraImage();
+    void stopCameraCallback(
+        const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 };
 }  // namespace io::gripper

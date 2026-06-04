@@ -5,6 +5,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(io_gripper_interfaces REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
@@ -26,6 +27,7 @@ target_include_directories(io_gripper_node PRIVATE
 ament_target_dependencies(io_gripper_node
   rclcpp
   std_srvs
+  sensor_msgs
   ament_index_cpp
   io_gripper_interfaces
 )

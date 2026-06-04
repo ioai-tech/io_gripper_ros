@@ -31,6 +31,8 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
 
   port_ = this->declare_parameter<std::string>("port", "/dev/ttyUSB0");
 
+  camera_image_port_ = this->declare_parameter<std::string>("camera_image_port", "/dev/video0");
+
   camera_serial_ = this->declare_parameter<std::string>("camera_serial", "");
 
   std::string package_share_dir =
@@ -43,9 +45,12 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
 
   RCLCPP_INFO(this->get_logger(), "auto_detect_port: %s",
               auto_detect_port_ ? "true" : "false");
-  RCLCPP_INFO(this->get_logger(), "configured port: %s", port_.c_str());
-  RCLCPP_INFO(this->get_logger(), "camera_serial: %s", camera_serial_.c_str());
-  RCLCPP_INFO(this->get_logger(), "config_file_path: %s",
+  if(!auto_detect_port_) {
+    RCLCPP_INFO(this->get_logger(), "Default Use port: %s", port_.c_str());
+    RCLCPP_INFO(this->get_logger(), "Default UseCameraImagePort: %s", camera_image_port_.c_str());\
+  }
+  RCLCPP_INFO(this->get_logger(), "Config Use camera_serial: %s", camera_serial_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Config config_file_path: %s",
               config_file_path_.c_str());
 
   connect_srv_ = this->create_service<std_srvs::srv::Trigger>(
@@ -131,6 +136,18 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
       "fix_config", std::bind(&IoGripperNode::fixConfigCallback, this,
                               std::placeholders::_1, std::placeholders::_2));
 
+  // camera_image_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>(
+  //     "camera_image", 10);
+  rclcpp::SensorDataQoS qos;
+  qos.keep_last(10); // 缓存最新 10 帧
+  camera_image_pub_ =
+    this->create_publisher<sensor_msgs::msg::CompressedImage>("camera_image", qos);
+
+  stop_camera_srv_ = this->create_service<std_srvs::srv::Trigger>(
+        "stop_camera",
+        std::bind(&IoGripperNode::stopCameraCallback, this,
+                  std::placeholders::_1, std::placeholders::_2));
+
   if (!createDriver()) {
     RCLCPP_ERROR(this->get_logger(), "Failed to create GripperDriver: %s",
                  last_error_message_.c_str());
@@ -169,6 +186,35 @@ std::string IoGripperNode::resolvePort() {
   }
 }
 
+//根据相机序列号寻找图像接口
+std::string IoGripperNode::resolveCameraImagePort() {
+  if (!auto_detect_port_) {
+    RCLCPP_INFO(this->get_logger(),
+                "Auto port detection disabled. Use configured CameraImagePort: %s",
+                camera_image_port_.c_str());
+    return camera_image_port_;
+  }
+
+  port_resolver_ = std::make_unique<GripperPortResolver>();
+
+  try {
+    port_resolver_->printAllMappings();
+
+    std::string resolved_port =
+        port_resolver_->resolveCameraImageByCameraSerial(camera_serial_);
+
+    RCLCPP_INFO(this->get_logger(),
+                "Resolved CameraImagePort port: camera_serial=%s, port=%s",
+                camera_serial_.c_str(), resolved_port.c_str());
+
+    return resolved_port;
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to resolve CameraImagePort port: %s",
+                 e.what());
+    return "";
+  }
+}
+
 // 初始化夹爪对象
 bool IoGripperNode::createDriver() {
   if (config_file_path_.empty()) {
@@ -187,7 +233,15 @@ bool IoGripperNode::createDriver() {
     return false;
   }
 
+  camera_image_port_ = resolveCameraImagePort();
+  if (camera_image_port_.empty()) {
+    last_error_message_ = "Failed to resolve CameraImagePort port.";
+    RCLCPP_ERROR(this->get_logger(), "%s", last_error_message_.c_str());
+    return false;
+  }
+
   RCLCPP_INFO(this->get_logger(), "Use gripper port: %s", port_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Use CameraImagePort port: %s", camera_image_port_.c_str());
 
   try {
     profile_ = port_resolver_->create_gripper_driver(config_file_path_);
@@ -203,9 +257,21 @@ bool IoGripperNode::createDriver() {
   try {
     driver_ =
         std::make_unique<GripperDriver>(port_, profile_, config_file_path_);
+        
   } catch (const std::exception& e) {
     last_error_message_ =
         std::string("Failed to create GripperDriver: ") + e.what();
+
+    RCLCPP_ERROR(this->get_logger(), "%s", last_error_message_.c_str());
+    return false;
+  }
+
+  try {
+    camera_ =
+        std::make_unique<GripperCamera>(camera_image_port_, profile_);
+  } catch (const std::exception& e) {
+    last_error_message_ =
+        std::string("Failed to create GripperCamera: ") + e.what();
 
     RCLCPP_ERROR(this->get_logger(), "%s", last_error_message_.c_str());
     return false;
@@ -249,6 +315,19 @@ bool IoGripperNode::connectDriver() {
   driver_connected_ = true;
   driver_initialized_ = false;
   last_error_message_ = "Driver connected successfully.";
+  RCLCPP_INFO(this->get_logger(), "%s", "Please call initialize before publish camera image.");
+  float fps = profile_.fps;
+
+  if (fps <= 0.0) {
+    fps = 30.0;
+  }
+  RCLCPP_INFO(this->get_logger(), "Use fps: %.2f", fps);
+
+  auto period_ms = static_cast<int>(1000.0 / fps);
+
+  camera_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(period_ms),
+      std::bind(&IoGripperNode::publishCameraImage, this));
 
   RCLCPP_INFO(this->get_logger(),
               "GripperDriver connected successfully. port=%s", port_.c_str());
@@ -495,7 +574,10 @@ void IoGripperNode::scanidsCallback(
     const std::shared_ptr<io_gripper_interfaces::srv::ScanIds::Request> request,
     std::shared_ptr<io_gripper_interfaces::srv::ScanIds::Response> response) {
   if (!driver_ || !driver_connected_) {
-    response->success = false;
+    response->success = false; stop_camera_srv_ = this->create_service<std_srvs::srv::Trigger>(
+        "/io_left_gripper/stop_camera",
+        std::bind(&IoGripperNode::stopCameraCallback, this,
+                  std::placeholders::_1, std::placeholders::_2));
     response->message = "Driver is not created or not connected.";
     return;
   }
@@ -927,6 +1009,63 @@ void IoGripperNode::fixConfigCallback(
     response->success = false;
     response->message = std::string("Failed to update servo_id: ") + e.what();
   }
+}
+
+
+void IoGripperNode::publishCameraImage() {
+  if (!isDriverReady()) {
+    RCLCPP_WARN(this->get_logger(), "Failed to capture camera image. Please call initialize before publish camera image.");
+    return;
+  }
+
+  try {
+    GripperCompressedImage image{};
+
+    // CameraSettings s = camera_->getCameraSettings(camera_image_port_);
+    // RCLCPP_INFO(this->get_logger(), "This camera can set width: %f", s.width);
+    // RCLCPP_INFO(this->get_logger(), "This camera can set height: %f", s.height);
+    // RCLCPP_INFO(this->get_logger(), "This camera can set fps: %f", s.fps);
+
+    if (!camera_->captureCompressedImage(image)) {
+      RCLCPP_WARN(this->get_logger(), "Failed to capture camera image.");
+      return;
+    }
+
+    sensor_msgs::msg::CompressedImage msg;
+
+    msg.header.stamp = this->now();
+    if (!camera_serial_.empty()) {
+      msg.header.frame_id = "gripper_camera: " + camera_serial_;
+    } else {
+      msg.header.frame_id = "gripper_camera";
+    }
+    msg.format = image.format;       // jpeg
+    msg.data = std::move(image.data);
+
+    camera_image_pub_->publish(msg);
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to publish camera image: %s",
+                 e.what());
+  }
+}
+
+
+void IoGripperNode::stopCameraCallback(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+    (void)request;
+
+    if (camera_timer_ && camera_timer_->is_ready()) {
+        camera_timer_->cancel();
+        response->success = true;
+        response->message = "Camera publisher stopped.";
+        RCLCPP_INFO(this->get_logger(), "Camera image publishing stopped by service call.");
+    } else {
+        response->success = false;
+        response->message = "Camera timer not running or already stopped.";
+        RCLCPP_WARN(this->get_logger(), "Camera timer already stopped.");
+    }
 }
 
 }  // namespace io::gripper
