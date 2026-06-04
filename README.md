@@ -71,10 +71,45 @@ ros2 service call /io_left_gripper/connect std_srvs/srv/Trigger "{}"
 ```bash
 ros2 service call /io_left_gripper/initialize std_srvs/srv/Trigger "{}"
 ```
-
+### 标定 (只需要标定一次，前提是配对应的配置文件不变)
+```bash
+ros2 service call /io_left_gripper/calibrate std_srvs/srv/Trigger "{}"
+```
 ### 夹爪语义控制
 ```bash
 ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 0, width_mm: 120, max_effort: 0.5, speed: 0.5}"
+```
+
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `mode` | uint8 | 控制模式：`0` = 毫米模式（width_mm），`1` = 归一化模式（normalized_opening） |
+| `width_mm` | float32 | 目标开口宽度（毫米），仅在 mode=0 时有效，范围由配置文件中的范围或者设置的软限位决定(不能低于软限位的最小值) |
+| `normalized_opening` | float32 | 归一化开口度（0.0-1.0），仅在 mode=1 时有效，0.0 表示完全闭合，1.0 表示完全打开 |
+| `max_effort` | float32 | 最大作用力（0.0-1.0），0.0 表示无限制，1.0 表示最大力 |
+| `speed` | float32 | 运动速度（0.0-1.0），0.0 表示最慢，1.0 表示最快 |
+
+**使用示例**：
+
+1. **毫米模式** - 设置开口宽度为 50mm：
+```bash
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 0, width_mm: 50.0, max_effort: 0.8, speed: 0.5}"
+```
+
+2. **归一化模式** - 设置开口度为 50%：
+```bash
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 0.5, max_effort: 0.6, speed: 0.3}"
+```
+
+3. **完全打开**：
+```bash
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 1.0, max_effort: 0.5, speed: 1.0}"
+```
+
+4. **完全闭合**：
+```bash
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 0.0, max_effort: 1.0, speed: 0.5}"
 ```
 
 #### 设置位置
@@ -82,35 +117,87 @@ ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg
 ros2 service call /io_left_gripper/command_position io_gripper_interfaces/srv/CommandPosition "{mode: 0, position_raw: 2742}"
 ```
 
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `mode` | uint8 | 位置模式：`0` = 原始位置值（position_raw），`1` = 弧度（angle_rad） |
+| `position_raw` | uint16 | 原始位置值（在限位范围内），仅在 mode=0 时有效 |
+| `angle_rad` | float32 | 角度（弧度），仅在 mode=1 时有效 |
+
 #### 设置速度
 ```bash
 ros2 service call /io_left_gripper/command_velocity io_gripper_interfaces/srv/CommandVelocity "{mode: 0, velocity_raw: 10}" 
 ```
+
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `mode` | uint8 | 速度模式：`0` = 原始速度值（velocity_raw），`1` = 弧度/秒（velocity_rad_s） |
+| `velocity_raw` | uint16 | 原始速度值（0-3000），仅在 mode=0 时有效，最大速度在配置文件中设置 |
+| `velocity_rad_s` | float32 | 角速度（弧度/秒），仅在 mode=1 时有效 |
 
 #### 设置力矩限制
 ```bash
 ros2 service call /io_left_gripper/set_effort_limit io_gripper_interfaces/srv/SetEffortLimit "{mode: 2, current_limit_ma: 3250, torque_limit_raw: 2000}"
 ```
 
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `mode` | uint8 | 设置模式：`0` = 仅设置电流限制，`1` = 仅设置力矩限制，`2` = 同时设置两者 |
+| `current_limit_ma` | float32 | 电流限制（毫安），默认范围 0-3250 mA |
+| `torque_limit_raw` | uint16 | 力矩限制原始值（0-1000） |
+
 #### 设置软限位
 ```bash
 ros2 service call /io_left_gripper/set_soft_limit io_gripper_interfaces/srv/SetSoftLimit "{min_width_mm: 10.0, max_width_mm: 80.2}"
 ```
+
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `min_width_mm` | float32 | 最小开口宽度（毫米），夹爪无法闭合小于此值 |
+| `max_width_mm` | float32 | 最大开口宽度（毫米），夹爪无法张开大于此值 |
 
 #### 使能/禁用力矩
 ```bash
 ros2 service call /io_left_gripper/set_torque io_gripper_interfaces/srv/SetTorque "{enable: false}"
 ```
 
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `enable` | bool | `true` = 使能力矩，`false` = 禁用力矩（夹爪释放） |
+
 #### 抓取物体
 ```bash
 ros2 service call /io_left_gripper/pick_object io_gripper_interfaces/srv/PickObject "{width_mm: 20.5, speed: 600, effort: 1000, timeout_ms: 1000}"
 ```
 
-#### 紧急停止
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `width_mm` | float32 | 目标抓取宽度（毫米） |
+| `speed` | float32 | 抓取速度（原始值，0-3000） |
+| `effort` | float32 | 抓取力（原始值，0-1000） |
+| `timeout_ms` | int32 | 超时时间（毫秒），超时后停止抓取 |
+
+#### 紧急停止 通过重新初始恢复
 ```bash
 ros2 service call /io_left_gripper/emergency_stop io_gripper_interfaces/srv/EmergencyStop "{release_torque: true}"
 ```
+
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `release_torque` | bool | `true` = 紧急停止并释放力矩，`false` = 紧急停止但保持力矩 |
 
 #### 获取状态
 ```bash
@@ -122,15 +209,34 @@ ros2 service call /io_left_gripper/get_status io_gripper_interfaces/srv/GetStatu
 ros2 service call /io_left_gripper/scan_ids io_gripper_interfaces/srv/ScanIds "{start_id: 1, end_id: 10}"
 ```
 
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `start_id` | uint8 | 扫描起始 ID（范围：0-253） |
+| `end_id` | uint8 | 扫描结束 ID（范围：0-253），必须大于等于 start_id |
+
 #### 修复配置(修复舵机ID)
 ```bash
 ros2 service call /io_left_gripper/fix_config io_gripper_interfaces/srv/FixConfig "{servo_id: 2}"
 ```
 
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `servo_id` | uint8 | 目标舵机 ID（范围：0-253），将配置文件中的 servo_id 修改为此值 |
+
 #### 启动状态轮询
 ```bash
 ros2 service call /io_left_gripper/start_polling io_gripper_interfaces/srv/StartPolling "{rate_hz: 100}"
 ```
+
+**参数说明**：
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `rate_hz` | float32 | 轮询频率（赫兹），建议范围 10-120 Hz |
 
 ### 开启轮询后获取轮询状态 once只获取一次
 ```bash
@@ -145,6 +251,10 @@ ros2 topic echo /io_left_gripper/camera_image --once
 #### 停止发布相机图像话题
 ```bash
 ros2 service call /io_left_gripper/stop_camera std_srvs/srv/Trigger "{}"
+```
+### 清理状态  在超过安全限制之后会进入故障状态，通过这里清除但不能清除急停状态
+```bash
+ros2 service call /io_left_gripper/clear_status std_srvs/srv/Trigger "{}"
 ```
 
 ### 断开连接
