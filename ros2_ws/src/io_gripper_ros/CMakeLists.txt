@@ -59,6 +59,7 @@ endif()
 
 target_link_libraries(io_gripper_node
   yaml-cpp
+  ${OpenCV_LIBS} 
   ${IO_GRIPPER_LIBDIR}/libio_gripper.so
 )
 
