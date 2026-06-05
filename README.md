@@ -21,13 +21,15 @@ ros2_ws/src/
 - ✅ 舵机 ID 扫描
 - ✅ 配置文件管理
 - ✅ 实时状态轮询
+- ✅ 获取相机参数
+- ✅ 实时发布相机图像话题
 
 ## 安装说明
 
 ### 1. 克隆项目（包含子模块）
 
 ```bash
-git clone --recurse-submodules <仓库地址>
+git clone --recurse-submodules git@git.io-ai.tech:io_sensexperience/io_gripper_ros.git
 cd ROS2_SDK/ros2_ws
 ```
 
@@ -262,7 +264,7 @@ ros2 service call /io_left_gripper/stop_camera std_srvs/srv/Trigger "{}"
 ros2 service call /io_left_gripper/clear_status std_srvs/srv/Trigger "{}"
 ```
 
-### 断开连接
+### 断开连接 并停止相机image发布
 ```bash
 ros2 service call /io_left_gripper/disconnect std_srvs/srv/Trigger "{}"
 ```
@@ -316,7 +318,7 @@ DeviceProfile:
 
 | 状态码 | 描述     |
 | ------ | -------- |
-| 0      | 未初始化 |
+| 0      | 未连接 |
 | 1      | 已连接   |
 | 2      | 就绪     |
 | 3      | 运行中   |

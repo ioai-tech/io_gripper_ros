@@ -439,6 +439,7 @@ void IoGripperNode::startpollingCallback(
   auto period_ms = static_cast<int64_t>(1000.0 / hz);
 
   if (period_ms < 1) {
+    RCLCPP_INFO(this->get_logger(), "period_ms is less than 1, set to 1.");
     period_ms = 1;
   }
 
@@ -499,7 +500,7 @@ void IoGripperNode::publishState() {
 
   status.servo_id = static_cast<uint8_t>(profile_.servo_id);
   if (!isDriverReady()) {
-    status.driver_state = static_cast<uint8_t>(driver_->state());
+    status.driver_state = driver_ ? static_cast<uint8_t>(driver_->state()) : 0;
     status.communication_ok = false;
     status.message = "driver object is not created or connected or initialized";
     status_pub_->publish(status);
@@ -544,7 +545,7 @@ void IoGripperNode::getStatusCallback(
 
   response->servo_id = static_cast<uint8_t>(profile_.servo_id);
   if (!isDriverReady()) {
-    response->driver_state = static_cast<uint8_t>(driver_->state());
+    response->driver_state = driver_ ? static_cast<uint8_t>(driver_->state()) : 0;
     response->communication_ok = false;
     response->message =
         "Driver object is not created or connected or initialized";
@@ -582,10 +583,7 @@ void IoGripperNode::scanidsCallback(
     const std::shared_ptr<io_gripper_interfaces::srv::ScanIds::Request> request,
     std::shared_ptr<io_gripper_interfaces::srv::ScanIds::Response> response) {
   if (!driver_ || !driver_connected_) {
-    response->success = false; stop_camera_srv_ = this->create_service<std_srvs::srv::Trigger>(
-        "/io_left_gripper/stop_camera",
-        std::bind(&IoGripperNode::stopCameraCallback, this,
-                  std::placeholders::_1, std::placeholders::_2));
+    response->success = false;
     response->message = "Driver is not created or not connected.";
     return;
   }
@@ -641,6 +639,16 @@ void IoGripperNode::disconnectCallback(
   try {
     driver_->stopPolling();
     driver_->disconnect();
+
+    // 断开连接时停止定时器
+    if (timer_) {
+      timer_->cancel();
+      timer_.reset();
+    }
+    if (camera_timer_) {
+      camera_timer_->cancel();
+      camera_timer_.reset();
+    }
 
     driver_connected_ = false;
     driver_initialized_ = false;
@@ -1001,6 +1009,17 @@ void IoGripperNode::fixConfigCallback(
       driver_->disconnect();  // 断开连接
       driver_.reset();        // 销毁 driver 对象
     }
+
+    // driver 销毁后停止定时器，避免空转
+    if (timer_) {
+      timer_->cancel();
+      timer_.reset();
+    }
+    if (camera_timer_) {
+      camera_timer_->cancel();
+      camera_timer_.reset();
+    }
+
     driver_created_ = false;
     driver_connected_ = false;
     driver_initialized_ = false;
@@ -1060,6 +1079,7 @@ void IoGripperNode::stopCameraCallback(
 
     if (camera_timer_ && camera_timer_->is_ready()) {
         camera_timer_->cancel();
+        camera_timer_.reset();
         response->success = true;
         response->message = "Camera publisher stopped.";
         RCLCPP_INFO(this->get_logger(), "Camera image publishing stopped by service call.");
