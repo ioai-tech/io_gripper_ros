@@ -29,6 +29,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
+#include "io_gripper_interfaces/srv/get_camera_settings.hpp"
 namespace io::gripper {
 // class GripperDriver;
 
@@ -90,7 +91,10 @@ class IoGripperNode : public rclcpp::Node {
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr
       camera_image_pub_;
 
-    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_camera_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_camera_srv_;
+
+  rclcpp::Service<io_gripper_interfaces::srv::GetCameraSettings>::SharedPtr
+      get_camera_settings_srv_;
 
 
 
@@ -187,5 +191,8 @@ class IoGripperNode : public rclcpp::Node {
     void stopCameraCallback(
         const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
         std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    void getCameraSettingsCallback(
+    const std::shared_ptr<io_gripper_interfaces::srv::GetCameraSettings::Request> request,
+    std::shared_ptr<io_gripper_interfaces::srv::GetCameraSettings::Response> response);
 };
 }  // namespace io::gripper

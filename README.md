@@ -248,6 +248,11 @@ ros2 topic echo /io_left_gripper/status --once
 ros2 topic echo /io_left_gripper/camera_image --once
 ```
 
+### 获取相机图像设置
+```bash
+ros2 service call /io_left_gripper/get_camera_settings io_gripper_interfaces/srv/GetCameraSettings "{}"
+```
+
 #### 停止发布相机图像话题
 ```bash
 ros2 service call /io_left_gripper/stop_camera std_srvs/srv/Trigger "{}"

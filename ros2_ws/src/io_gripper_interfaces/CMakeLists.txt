@@ -27,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 "srv/CommandPosition.srv"
 "srv/CommandVelocity.srv"
 "srv/FixConfig.srv"
+"srv/GetCameraSettings.srv"
 DEPENDENCIES std_msgs
 )
 

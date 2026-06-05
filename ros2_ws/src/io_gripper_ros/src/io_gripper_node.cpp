@@ -147,6 +147,14 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
         "stop_camera",
         std::bind(&IoGripperNode::stopCameraCallback, this,
                   std::placeholders::_1, std::placeholders::_2));
+  
+  get_camera_settings_srv_ =
+    this->create_service<io_gripper_interfaces::srv::GetCameraSettings>(
+        "get_camera_settings",
+        std::bind(&IoGripperNode::getCameraSettingsCallback,
+                  this,
+                  std::placeholders::_1,
+                  std::placeholders::_2));
 
   if (!createDriver()) {
     RCLCPP_ERROR(this->get_logger(), "Failed to create GripperDriver: %s",
@@ -1014,17 +1022,11 @@ void IoGripperNode::fixConfigCallback(
 
 void IoGripperNode::publishCameraImage() {
   if (!isDriverReady()) {
-    RCLCPP_WARN(this->get_logger(), "Failed to capture camera image. Please call initialize before publish camera image.");
     return;
   }
 
   try {
     GripperCompressedImage image{};
-
-    // CameraSettings s = camera_->getCameraSettings(camera_image_port_);
-    // RCLCPP_INFO(this->get_logger(), "This camera can set width: %f", s.width);
-    // RCLCPP_INFO(this->get_logger(), "This camera can set height: %f", s.height);
-    // RCLCPP_INFO(this->get_logger(), "This camera can set fps: %f", s.fps);
 
     if (!camera_->captureCompressedImage(image)) {
       RCLCPP_WARN(this->get_logger(), "Failed to capture camera image.");
@@ -1066,6 +1068,42 @@ void IoGripperNode::stopCameraCallback(
         response->message = "Camera timer not running or already stopped.";
         RCLCPP_WARN(this->get_logger(), "Camera timer already stopped.");
     }
+}
+
+void IoGripperNode::getCameraSettingsCallback(
+    const std::shared_ptr<io_gripper_interfaces::srv::GetCameraSettings::Request> request,
+    std::shared_ptr<io_gripper_interfaces::srv::GetCameraSettings::Response> response) {
+  (void)request;
+
+  if (!camera_) {
+    response->success = false;
+    response->message = "Camera object is not created.";
+    response->width = 0.0;
+    response->height = 0.0;
+    response->fps = 0.0;
+    return;
+  }
+
+
+  try {
+    CameraSettings s = camera_->getCameraSettings(camera_image_port_);
+
+    response->success = true;
+    response->message = "Get camera settings successfully.";
+    response->width = s.width;
+    response->height = s.height;
+    response->fps = s.fps;
+
+    RCLCPP_INFO(this->get_logger(),
+                "Camera settings: width=%.2f, height=%.2f, fps=%.2f",
+                s.width, s.height, s.fps);
+  } catch (const std::exception& e) {
+    response->success = false;
+    response->message = std::string("Failed to get camera settings: ") + e.what();
+    response->width = 0.0;
+    response->height = 0.0;
+    response->fps = 0.0;
+  }
 }
 
 }  // namespace io::gripper
