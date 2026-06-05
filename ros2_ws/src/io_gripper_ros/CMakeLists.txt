@@ -34,12 +34,12 @@ ament_target_dependencies(io_gripper_node
 
 # 预编译的 io_gripper sdk 库按目标架构选择：
 #   x86_64  -> lib/libio_gripper.so
-#   aarch64 -> lib_arm/libio_gripper_arm.so
+#   aarch64 -> lib_arm/libio_gripper.so
 # 两者 SONAME 均为 libio_gripper.so。这里把选中的库拷到构建目录并归一化命名为
 # libio_gripper.so，再随包安装到 lib/，可执行用相对 RPATH ($ORIGIN/..) 找到它，
 # 这样链接、运行、打包部署都成立（不再依赖源码目录的绝对路径）。
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-  set(IO_GRIPPER_PREBUILT "${IO_GRIPPER_SDK_DIR}/lib_arm/libio_gripper_arm.so")
+  set(IO_GRIPPER_PREBUILT "${IO_GRIPPER_SDK_DIR}/lib_arm/libio_gripper.so")
 else()
   set(IO_GRIPPER_PREBUILT "${IO_GRIPPER_SDK_DIR}/lib/libio_gripper.so")
 endif()
