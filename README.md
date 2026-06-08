@@ -54,13 +54,13 @@ git submodule update --init --recursive
 ros2 run io_gripper_ros io_gripper_node --ros-args -r __node:=left_gripper_node -r __ns:=/io_left_gripper -p auto_detect_port:=true -p camera_serial:=G2026061 -p config_name:=new_config.yaml
 ```
 ### 命令说明
-  -`__node:=left_gripper_node` 节点名称 不同节点对应不同的节点名称
-  -`__ns:=/io_left_gripper` 命名空间 不同的夹爪节点必须用不同的命名空间，同时各自对应的 topic和service 也要修改
-  -`auto_detect_port:=true` 是否自动检测串口端口 默认true。 如果选择false 则需要手动指定串口设备名称和相机端口（或者使用默认值），同时不必传入`camera_serial`
-  -`port:=/dev/ttyUSB0` 串口设备名称，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/ttyUSB0’
-  -`camera_image_port:=/dev/video0` 相机端口，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/video0’
-  -`camera_serial:=""` 夹爪相机对应的序列号，如果`auto_detect_port:=true`，则必须传入该参数来控制对应的夹爪。如果`auto_detect_port:=false`，则可以不传入该参数，使用默认值。
-  -`config_name:=new_config.yaml` 配置文件名称
+  - `__node:=left_gripper_node` 节点名称 不同节点对应不同的节点名称
+  - `__ns:=/io_left_gripper` 命名空间 不同的夹爪节点必须用不同的命名空间，同时各自对应的 topic和service 也要修改
+  - `auto_detect_port:=true` 是否自动检测串口端口 默认true。 如果选择false 则需要手动指定串口设备名称和相机端口（或者使用默认值），同时不必传入`camera_serial`
+  - `port:=/dev/ttyUSB0` 串口设备名称，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/ttyUSB0’
+  - `camera_image_port:=/dev/video0` 相机端口，如果上面取消了自动检测端口，需要手动指定串口设备名称，或者不传入参数，选择使用默认值 ‘/dev/video0’
+  - `camera_serial:=""` 夹爪相机对应的序列号，如果`auto_detect_port:=true`，则必须传入该参数来控制对应的夹爪。如果`auto_detect_port:=false`，则可以不传入该参数，使用默认值。
+  - `config_name:=new_config.yaml` 配置文件名称
 
 ### 服务调用示例
 
