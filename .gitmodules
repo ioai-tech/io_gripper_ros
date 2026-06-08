@@ -1,6 +1,6 @@
 [submodule "ros2_ws/src/io_gripper_sdk"]
 	path = ros2_ws/src/io_gripper_sdk
-	url = git@github.com:ioai-tech/io_gripper_sdk.git
-	# url = git@git.io-ai.tech:io_sensexperience/io_gripper_sdk.git
+	# url = git@github.com:ioai-tech/io_gripper_sdk.git
+	url = git@git.io-ai.tech:io_sensexperience/io_gripper_sdk.git
 
 

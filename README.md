@@ -29,7 +29,7 @@ ros2_ws/src/
 ### 1. 克隆项目（包含子模块）
 
 ```bash
-git clone --recurse-submodules git@github.com:ioai-tech/io_gripper_ros.git
+git clone --recurse-submodules git@git.io-ai.tech:io_sensexperience/io_gripper_sdk.git
 cd io_gripper_ros/ros2_ws
 ```
 
@@ -331,7 +331,7 @@ DeviceProfile:
 
 ```bash
 # 添加子模块
-git submodule add git@github.com:ioai-tech/io_gripper_sdk.git ros2_ws/src/io_gripper_sdk
+git submodule add git@git.io-ai.tech:io_sensexperience/io_gripper_sdk.git ros2_ws/src/io_gripper_sdk
 
 # 更新子模块
 git submodule update --remote
