@@ -331,7 +331,7 @@ DeviceProfile:
 
 ```bash
 # 添加子模块
-git submodule add git@github.com:ioai-tech/io_gripper_sdk.git
+git submodule add git@github.com:ioai-tech/io_gripper_sdk.git ros2_ws/src/io_gripper_sdk
 
 # 更新子模块
 git submodule update --remote
