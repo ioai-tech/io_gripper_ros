@@ -29,11 +29,12 @@ ros2_ws/src/
 ### 1. 克隆项目（包含子模块）
 
 ```bash
-git clone --recurse-submodules git@git.io-ai.tech:io_sensexperience/io_gripper_ros.git
-cd ROS2_SDK/ros2_ws
+git clone --recurse-submodules git@github.com:ioai-tech/io_gripper_ros.git
+cd io_gripper_ros/ros2_ws
 ```
 
-### 2. 构建项目(在ros2_ws下)
+
+### 2. 构建项目(在ros2_ws目录下)
 
 ```bash
 colcon build --packages-select io_gripper_interfaces io_gripper_ros
@@ -330,7 +331,7 @@ DeviceProfile:
 
 ```bash
 # 添加子模块
-git submodule add git@git.io-ai.tech:io_sensexperience/io_gripper_sdk.git ros2_ws/src/io_gripper_sdk
+git submodule add git@github.com:ioai-tech/io_gripper_sdk.git
 
 # 更新子模块
 git submodule update --remote
@@ -391,11 +392,12 @@ sudo docker build \
 ```
 
 ## 运行节点
+
+**x64：**
 ```bash
-x64：
 sudo docker run --rm -it \
- --net=host \
- --ipc=host\
+  --net=host \
+  --ipc=host \
   --privileged \
   -v /dev:/dev \
   io_gripper_ros:latest \
@@ -411,11 +413,11 @@ sudo docker run --rm -it \
              -p config_name:=new_config.yaml"
 ```
 
-``` bash
-arm64版本：
+**arm64版本：**
+```bash
 sudo docker run --rm -it \
- --net=host \
- --ipc=host\
+  --net=host \
+  --ipc=host \
   --privileged \
   -v /dev:/dev \
   io_gripper_ros:latest \
