@@ -74,45 +74,34 @@ ros2 service call /io_left_gripper/connect std_srvs/srv/Trigger "{}"
 ```bash
 ros2 service call /io_left_gripper/initialize std_srvs/srv/Trigger "{}"
 ```
-### 标定 (只需要标定一次，前提是配对应的配置文件不变)
+### 标定 (只需要标定一次，前提是配对应的配置文件不变 | 标定需要在 initialize 之前调用)
 ```bash
 ros2 service call /io_left_gripper/calibrate std_srvs/srv/Trigger "{}"
 ```
-### 夹爪语义控制
+### 夹爪开合语义控制
 ```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 0, width_mm: 120, max_effort: 0.5, speed: 0.5}"
+ros2 topic pub --once /io_left_gripper/joint_states sensor_msgs/msg/JointState "{name: ['fpy'], position: [1.0], velocity: [0.5], effort: [1]}"
 ```
-
 **参数说明**：
 
 | 参数名 | 类型 | 说明 |
 |--------|------|------|
-| `mode` | uint8 | 控制模式：`0` = 毫米模式（width_mm），`1` = 归一化模式（normalized_opening） |
-| `width_mm` | float32 | 目标开口宽度（毫米），仅在 mode=0 时有效，范围由配置文件中的范围或者设置的软限位决定(不能低于软限位的最小值) |
-| `normalized_opening` | float32 | 归一化开口度（0.0-1.0），仅在 mode=1 时有效，0.0 表示完全闭合，1.0 表示完全打开 |
-| `max_effort` | float32 | 最大作用力（0.0-1.0），0.0 表示无限制，1.0 表示最大力 |
-| `speed` | float32 | 运动速度（0.0-1.0），0.0 表示最慢，1.0 表示最快 |
+| `name` | string[] | 控制名称 |
+| `normalized_opening` | float32[] | 归一化开口度（0.0-1.0），0.0 表示完全闭合，1.0 表示完全打开 |
+| `max_effort` | float32[] | 最大作用力（0.0-1.0），0.0 表示无力矩，1.0 表示最大力,可以不传入. 使用默认值0.5 |
+| `speed` | float32[] | 运动速度（0.0-1.0），0.0 表示最慢，1.0 表示最快. 可以不传入，使用默认值0.5 |
 
 **使用示例**：
 
-1. **毫米模式** - 设置开口宽度为 50mm：
+1. **完全打开**：
 ```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 0, width_mm: 50.0, max_effort: 0.8, speed: 0.5}"
+ros2 topic pub --once /io_left_gripper/joint_states sensor_msgs/msg/JointState "{name: ['gripper'], position: [1], velocity: [0.5], effort: [0.5]}"
+
 ```
 
-2. **归一化模式** - 设置开口度为 50%：
+2. **完全闭合**：
 ```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 0.5, max_effort: 0.6, speed: 0.3}"
-```
-
-3. **完全打开**：
-```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 1.0, max_effort: 0.5, speed: 1.0}"
-```
-
-4. **完全闭合**：
-```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{mode: 1, normalized_opening: 0.0, max_effort: 1.0, speed: 0.5}"
+ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{name: ['gripper'], normalized_opening: [0.0], max_effort: [1.0], speed: [0.5]}"
 ```
 
 #### 设置位置

@@ -13,8 +13,6 @@
 
 #include "gripper_port_resolver.hpp"
 #include "io_gripper.hpp"
-#include "io_gripper_interfaces/msg/gripper_command.hpp"
-#include "io_gripper_interfaces/msg/status.hpp"
 #include "io_gripper_interfaces/srv/command_position.hpp"
 #include "io_gripper_interfaces/srv/command_velocity.hpp"
 #include "io_gripper_interfaces/srv/emergency_stop.hpp"
@@ -29,6 +27,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "io_gripper_interfaces/srv/get_camera_settings.hpp"
 namespace io::gripper {
 // class GripperDriver;
@@ -47,6 +46,7 @@ class IoGripperNode : public rclcpp::Node {
   std::string port_;
   std::string camera_image_port_;
   std::string config_file_path_;
+  std::string subscribe_name_{"gripper"};
   std::atomic_bool calibrating_{false};
 
   bool driver_created_{false};
@@ -62,9 +62,9 @@ class IoGripperNode : public rclcpp::Node {
   rclcpp::Service<io_gripper_interfaces::srv::StartPolling>::SharedPtr
       startpolling_srv_;
 
-  rclcpp::Subscription<io_gripper_interfaces::msg::GripperCommand>::SharedPtr
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
       target_sub_;
-  rclcpp::Publisher<io_gripper_interfaces::msg::Status>::SharedPtr status_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr status_pub_;
   rclcpp::Service<io_gripper_interfaces::srv::GetStatus>::SharedPtr
       get_status_srv_;
   rclcpp::Service<io_gripper_interfaces::srv::ScanIds>::SharedPtr scanids_srv_;
@@ -111,7 +111,7 @@ class IoGripperNode : public rclcpp::Node {
       std::shared_ptr<io_gripper_interfaces::srv::StartPolling::Response>
           reponse);
   void targetCallback(
-      const io_gripper_interfaces::msg::GripperCommand::SharedPtr msg);
+      const sensor_msgs::msg::JointState::SharedPtr msg);
   void publishState();
 
   void connectCallback(

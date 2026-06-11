@@ -16,6 +16,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <chrono>
 #include <fstream>
+#include <cmath>
 #include <functional>
 #include <string>
 
@@ -68,14 +69,11 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
                     std::placeholders::_1, std::placeholders::_2));
 
   target_sub_ = this->create_subscription<
-      io_gripper_interfaces::msg::GripperCommand>(  // 这里写的是绝对topic
-                                                    // 相对topic，会跟随
-                                                    // namespace
-                                                    // 变化之后可以考虑更改
-      "gripper_command", 10,
+      sensor_msgs::msg::JointState>(
+      "joint_states", 10,
       std::bind(&IoGripperNode::targetCallback, this, std::placeholders::_1));
   status_pub_ =
-      this->create_publisher<io_gripper_interfaces::msg::Status>("status", 10);
+      this->create_publisher<sensor_msgs::msg::JointState>("status", 10);
   get_status_srv_ = this->create_service<io_gripper_interfaces::srv::GetStatus>(
       "get_status", std::bind(&IoGripperNode::getStatusCallback, this,
                               std::placeholders::_1, std::placeholders::_2));
@@ -457,83 +455,86 @@ void IoGripperNode::startpollingCallback(
                       std::to_string(hz) + " Hz.";
 }
 
-void IoGripperNode::targetCallback(
-    const io_gripper_interfaces::msg::GripperCommand::SharedPtr msg) {
-  GripperCommand cmd{};
+void IoGripperNode::targetCallback(const sensor_msgs::msg::JointState::SharedPtr msg) {
   if (!isDriverReady()) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Driver is not ready, ignore gripper command.");
+    RCLCPP_ERROR(this->get_logger(), "Driver is not ready, ignore joint state.");
     return;
   }
 
-  if (msg->mode == io_gripper_interfaces::msg::GripperCommand::MODE_WIDTH_MM) {
-    cmd.use_width_mm = true;
-    cmd.width_mm = msg->width_mm;
+  GripperCommand cmd{};
 
-    cmd.use_normalized_opening = false;
+  if (msg->position.empty()) {
+    RCLCPP_ERROR(this->get_logger(), "Joint state position is empty.");
+    return;
+  }
+  cmd.use_width_mm = false;
+  cmd.use_normalized_opening = true;
+  cmd.normalized_opening = msg->position[0];
+
+  if(msg->position[0] < 0.0f){
     cmd.normalized_opening = 0.0f;
-    cmd.max_effort = msg->max_effort;
-    cmd.speed = msg->speed;
-    driver_->commandGripper(cmd);
-  } else if (msg->mode ==
-             io_gripper_interfaces::msg::GripperCommand::MODE_NORMALIZED) {
-    cmd.use_width_mm = false;
-    cmd.width_mm = 0.0f;
-
-    cmd.use_normalized_opening = true;
-    cmd.normalized_opening = msg->normalized_opening;
-    cmd.max_effort = msg->max_effort;
-    cmd.speed = msg->speed;
-    driver_->commandGripper(cmd);
-  } else {
-    RCLCPP_ERROR(this->get_logger(), "Invalid gripper command mode: %u",
-                 msg->mode);
-    return;
+    RCLCPP_INFO(this->get_logger(), "Joint state position is less than 0.0f. USE DEFAULT NORMALIZED OPENING SET to 0.0f.");
+  }else if(msg->position[0] > 1.0f){
+    cmd.normalized_opening = 1.0f;
+    RCLCPP_INFO(this->get_logger(), "Joint state position is greater than 1.0f. USE DEFAULT NORMALIZED OPENING SET to 1.0f.");
   }
+
+  if (msg->velocity.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Joint state velocity is empty. USE DEFAULT SPEED SET to 0.5f.");
+    cmd.speed = 0.5f;
+  }else{
+    cmd.speed = msg->velocity[0];
+  }
+
+  if(msg->effort.empty()){
+    RCLCPP_INFO(this->get_logger(), "Joint state effort is empty. USE DEFAULT MAX EFFORT SET to 0.5f.");
+    cmd.max_effort = 0.5f;
+  }else{
+    cmd.max_effort = msg->effort[0];
+  }
+
+  if(msg->name.empty()){
+    RCLCPP_INFO(this->get_logger(), "Joint state name is empty. USE DEFAULT NAME SET to 'gripper'.");
+  }else{
+    subscribe_name_ = msg->name[0];
+  }
+  driver_->commandGripper(cmd);
+  return;
 }
 
 void IoGripperNode::publishState() {
-  io_gripper_interfaces::msg::Status status;
-
+  sensor_msgs::msg::JointState status;
   status.header.stamp = this->now();
-  status.header.frame_id = "gripper";
+  status.header.frame_id = subscribe_name_;
+  status.name.push_back(subscribe_name_);
 
-  status.servo_id = static_cast<uint8_t>(profile_.servo_id);
   if (!isDriverReady()) {
-    status.driver_state = driver_ ? static_cast<uint8_t>(driver_->state()) : 0;
-    status.communication_ok = false;
-    status.message = "driver object is not created or connected or initialized";
+    status.position.push_back(0.0f);
+    status.velocity.push_back(0.0f);
+    status.effort.push_back(0.0f);
     status_pub_->publish(status);
+    RCLCPP_INFO(this->get_logger(), "Driver is not ready, joint state is 0.0f 0.0f 0.0f.");
     return;
   }
-
-  try {
     // 从缓存中获取，前提是要开启轮询
     GripperState state =
         driver_->getCachedState(static_cast<uint8_t>(profile_.servo_id));
-    status.driver_state = static_cast<uint8_t>(driver_->state());
-    status.communication_ok = true;
-    status.message = "ok";
+    float position_raw = static_cast<float>(state.position_raw);
+    float velocity_raw = static_cast<float>(state.velocity_raw);
 
-    status.position_raw = state.position_raw;
-    status.position_rad = state.position_rad;
+    float max_position = static_cast<float>(driver_->getmaxpos());
+    float min_position = static_cast<float>(driver_->getminpos());
 
-    status.velocity_raw = state.velocity_raw;
-    status.velocity_rad_s = state.velocity_rad_s;
+    float position =(max_position - position_raw) / (max_position - min_position);
 
-    status.has_load = true;
-    status.load_raw = state.load_raw;
-
-    status.voltage_v = state.voltage_V;
-    status.temperature_c = state.temperature_C;
-
-  } catch (const std::exception& e) {
-    status.communication_ok = false;
-    status.message = std::string("readState failed: ") + e.what();
-  }
-
-  status_pub_->publish(status);
+    float velocity =static_cast<float>(velocity_raw / profile_.max_servo_velocity);
+    // RCLCPP_INFO(this->get_logger(), "velocity_raw: %f", velocity_raw);
+    // RCLCPP_INFO(this->get_logger(), "profile_.max_servo_velocity: %d", profile_.max_servo_velocity);
+    status.position.push_back(position);
+    status.velocity.push_back(velocity);
+    status_pub_->publish(status);
 }
+
 
 void IoGripperNode::getStatusCallback(
     const std::shared_ptr<io_gripper_interfaces::srv::GetStatus::Request>
@@ -541,7 +542,7 @@ void IoGripperNode::getStatusCallback(
     std::shared_ptr<io_gripper_interfaces::srv::GetStatus::Response> response) {
   (void)request;
   response->header.stamp = this->now();
-  response->header.frame_id = "gripper";
+  response->header.frame_id = subscribe_name_;
 
   response->servo_id = static_cast<uint8_t>(profile_.servo_id);
   if (!isDriverReady()) {
@@ -666,11 +667,10 @@ void IoGripperNode::calibrateCallback(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void)request;
 
-  if (!isDriverReady()) {
+  if (!driver_ || !driver_connected_) {
     response->success = false;
     response->message =
-        "Driver is not ready: object missing, not connected, or not "
-        "initialized.";
+        "Driver is not ready: object missing, or not connected.";
     return;
   }
 

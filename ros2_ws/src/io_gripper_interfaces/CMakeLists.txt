@@ -14,8 +14,6 @@ find_package(std_msgs REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
-"msg/Status.msg"
-"msg/GripperCommand.msg"
 "srv/StartPolling.srv"
 "srv/ScanIds.srv"
 "srv/SetTorque.srv"
