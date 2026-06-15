@@ -175,7 +175,7 @@ std::string IoGripperNode::resolvePort() {
   port_resolver_ = std::make_unique<GripperPortResolver>();
 
   try {
-    port_resolver_->printAllMappings();
+    // port_resolver_->printAllMappings();
 
     std::string resolved_port =
         port_resolver_->resolveByCameraSerial(camera_serial_);

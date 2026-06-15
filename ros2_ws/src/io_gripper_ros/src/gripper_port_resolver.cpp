@@ -51,15 +51,25 @@ void GripperPortResolver::printAllMappings() {
   }
 
   for (size_t i = 0; i < cameras.size(); ++i) {
+    std::cout << "[" << i << "] " << std::endl;
     const auto& cam = cameras[i];
-
+    if(cam.serial == "01.00.00"){
+      std::string camera_vedio_path =
+        port_finder_.find_video_by_camera_serial(cam.serial);
+        std::string camera_id_path = port_finder_.get_video_id_path(camera_vedio_path);
+        std::string res_camera_video_path = port_finder_.find_video_by_id_path(camera_id_path);
+        std::cout << "camera_serial=" << cam.serial
+              << ", res_camera_video_path=" << res_camera_video_path
+              << ", camera_id_path=" << camera_id_path
+              << std::endl;
+        continue;
+    }
     std::string gripper_path =
         port_finder_.resolve_gripper_by_camera_serial(cam.serial);
 
     std::string tty_port = port_finder_.find_by_path_from_tty(gripper_path);
 
-    std::cout << "[" << i << "] "
-              << "camera_serial=" << cam.serial
+    std::cout<< "camera_serial=" << cam.serial
               << ", gripper_path=" << gripper_path << ", tty_port=" << tty_port
               << std::endl;
   }
