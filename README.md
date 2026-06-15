@@ -80,7 +80,7 @@ ros2 service call /io_left_gripper/calibrate std_srvs/srv/Trigger "{}"
 ```
 ### 夹爪开合语义控制
 ```bash
-ros2 topic pub --once /io_left_gripper/joint_states sensor_msgs/msg/JointState "{name: ['fpy'], position: [1.0], velocity: [0.5], effort: [1]}"
+ros2 topic pub --once /io_left_gripper/joint_cmd sensor_msgs/msg/JointState "{name: ['fpy'], position: [1.0], velocity: [0.5], effort: [1]}"
 ```
 **参数说明**：
 
@@ -95,13 +95,13 @@ ros2 topic pub --once /io_left_gripper/joint_states sensor_msgs/msg/JointState "
 
 1. **完全打开**：
 ```bash
-ros2 topic pub --once /io_left_gripper/joint_states sensor_msgs/msg/JointState "{name: ['gripper'], position: [1], velocity: [0.5], effort: [0.5]}"
+ros2 topic pub --once /io_left_gripper/joint_cmd sensor_msgs/msg/JointState "{name: ['gripper'], position: [1], velocity: [0.5], effort: [0.5]}"
 
 ```
 
 2. **完全闭合**：
 ```bash
-ros2 topic pub --once /io_left_gripper/gripper_command io_gripper_interfaces/msg/GripperCommand "{name: ['gripper'], normalized_opening: [0.0], max_effort: [1.0], speed: [0.5]}"
+ros2 topic pub --once /io_left_gripper/joint_cmd sensor_msgs/msg/JointState "{name: ['gripper'], position: [0.0], velocity: [0.0], effort: [0.5]}"
 ```
 
 #### 设置位置
@@ -232,7 +232,7 @@ ros2 service call /io_left_gripper/start_polling io_gripper_interfaces/srv/Start
 
 ### 开启轮询后获取轮询状态 once只获取一次
 ```bash
-ros2 topic echo /io_left_gripper/status --once
+ros2 topic echo /io_left_gripper/joint_states --once
 ```
 
 ### 获取相机图像

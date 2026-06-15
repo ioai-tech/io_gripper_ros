@@ -70,10 +70,10 @@ IoGripperNode::IoGripperNode() : Node("io_gripper_node") {
 
   target_sub_ = this->create_subscription<
       sensor_msgs::msg::JointState>(
-      "joint_states", 10,
+      "joint_cmd", 10,
       std::bind(&IoGripperNode::targetCallback, this, std::placeholders::_1));
   status_pub_ =
-      this->create_publisher<sensor_msgs::msg::JointState>("status", 10);
+      this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   get_status_srv_ = this->create_service<io_gripper_interfaces::srv::GetStatus>(
       "get_status", std::bind(&IoGripperNode::getStatusCallback, this,
                               std::placeholders::_1, std::placeholders::_2));
@@ -175,7 +175,6 @@ std::string IoGripperNode::resolvePort() {
   port_resolver_ = std::make_unique<GripperPortResolver>();
 
   try {
-    // port_resolver_->printAllMappings();
 
     std::string resolved_port =
         port_resolver_->resolveByCameraSerial(camera_serial_);
