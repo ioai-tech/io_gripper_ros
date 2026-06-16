@@ -1,7 +1,7 @@
 DeviceProfile:
   device_info:
     model_name: Feetech_DeviceProfile
-    servo_id: 2
+    servo_id: 1
     recommended_baudrate: 115200
   capabilities:
     supports_sync_write: true
@@ -23,4 +23,4 @@ DeviceProfile:
     width: 640
     height: 480
     fps: 30.0
-    jpeg_quality: 80
+    jpeg_quality: 60
